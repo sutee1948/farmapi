@@ -1,0 +1,19 @@
+const fs            = require('fs-extra');
+const path          = require('path');
+const jwt           = require('jsonwebtoken');
+const privateKEY    = fs.readFileSync(path.join(__dirname, './key/private.key'), 'utf8');
+
+const signOptions = {
+  issuer: 'Farm Account', // Issuer (Software organization who issues the token)
+  // audience: 'https://ipstthailand.com', // Audience (Domain within which this token will live and function) 
+  audience: 'farm-account', // Audience (Domain within which this token will live and function)
+  expiresIn: '1d', // 1 days validity,
+  algorithm: 'RS256'
+};
+
+const GenerateAuthToken = (user) => {
+  const payload = { user: user };
+  return jwt.sign(payload, privateKEY, signOptions);
+};
+
+module.exports = GenerateAuthToken;
