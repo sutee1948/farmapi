@@ -10,11 +10,12 @@ const fs = require("fs");
 const multer = require("multer");
 const Authenticate = require('./verify-token');
 const GenerateAuthToken = require('./generator-token')
-const {
-    jsonFormatSuccess,
-    jsonFormatError
-} = require('./format_json');
-
+// const {
+//     jsonFormatSuccess,
+//     jsonFormatError
+// } = require('./format_json');
+// const jsonFormatSuccess = require('./format_json');
+// const jsonFormatError = require('./format_json');
 server.use(
     cors(),
     bodyParser.json(),
@@ -161,10 +162,12 @@ server.post('/register', async (req, res) => {
     })
 });
 server.post('/login', (req, res) => {
-    const {
-        username,
-        password
-    } = req.body;
+    // const {
+    //     username,
+    //     password
+    // } = req.body;
+    const username = req.body.username;
+    const password = req.body.password;
     mysqlConnection.query('SELECT * FROM user WHERE card_id_number = ? AND is_active= ?', [username, 1], async (err, results, fields) => {
         if (!err) {
             if (results.length > 0) {
@@ -399,3 +402,18 @@ server.post('/edit/income', Authenticate, (req, res) => {
         }
     })
 });
+const jsonFormatSuccess = (results) => {
+    return {
+      success: 1,
+      data: results
+    };
+  };
+  
+  const jsonFormatError = (code, message) => {
+    return {
+      success: 0,
+      error_code: code,
+      error_message: message
+    };
+  };
+  
