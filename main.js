@@ -10,12 +10,10 @@ const fs = require("fs");
 const multer = require("multer");
 const Authenticate = require('./verify-token');
 const GenerateAuthToken = require('./generator-token')
-// const {
-//     jsonFormatSuccess,
-//     jsonFormatError
-// } = require('./format_json');
-// const jsonFormatSuccess = require('./format_json');
-// const jsonFormatError = require('./format_json');
+const {
+    jsonFormatSuccess,
+    jsonFormatError
+} = require('./format_json'); 
 server.use(
     cors(),
     bodyParser.json(),
@@ -27,14 +25,7 @@ server.use(
 
 //WebApp.connectHandlers.use(Meteor.bindEnvironment(server));
 
-var mysqlConnection = mysql.createConnection({
-    // host: '127.0.0.1',
-    // user: 'root',
-    // port: '3306',
-    // password: '',
-    // database: 'list',
-    // multipleStatements: true
-
+var mysqlConnection = mysql.createConnection({ 
     host: 'dcrhg4kh56j13bnu.cbetxkdyhwsb.us-east-1.rds.amazonaws.com',
     user: 'o26p6bs33yavssso',
     port: '3306',
@@ -59,7 +50,7 @@ const fileFilter = (req, file, cb) => {
     const allowedTypes = ["image/jpeg", "image/jpg", "image/png"];
     if (!allowedTypes.includes(file.mimetype)) {
         const error = new Error("Incorrect file");
-        error.code = "INCORRECT_FIvarYPE";
+        error.code = "INCORRECT_FILETYPE";
         return cb(error, false);
     }
     cb(null, true);
@@ -74,10 +65,10 @@ const storage = multer.diskStorage({
         cb(null, path);
     },
     filename: (req, file, cb) => {
-        var body = req.body;
-        var nameOfFile = file.originalname;
-        var array_last_name = nameOfFile.split(".");
-        var file_lname = array_last_name[array_last_name.length - 1];
+        let body = req.body;
+        let nameOfFile = file.originalname;
+        let array_last_name = nameOfFile.split(".");
+        let file_lname = array_last_name[array_last_name.length - 1];
         cb(null, `${body.user_id}.${file_lname}`);
     },
 });
@@ -91,10 +82,10 @@ const storagefarm = multer.diskStorage({
         cb(null, path);
     },
     filename: (req, file, cb) => {
-        var body = req.body;
-        var nameOfFile = file.originalname;
-        var array_last_name = nameOfFile.split(".");
-        var file_lname = array_last_name[array_last_name.length - 1];
+        let body = req.body;
+        let nameOfFile = file.originalname;
+        let array_last_name = nameOfFile.split(".");
+        let file_lname = array_last_name[array_last_name.length - 1];
         cb(null, `${body.farm_id}.${file_lname}`);
     },
 });
@@ -115,7 +106,7 @@ const uploadfarm = multer({
     },
 });
 server.post("/upload-owner-img", upload.single("files"), (req, res, next) => {
-    var files = req.file;
+    let files = req.file;
     const params = req.body;
     if (files) {
         // res.json(jsonFormatSuccess("Upload success"));
@@ -132,7 +123,7 @@ server.post("/upload-owner-img", upload.single("files"), (req, res, next) => {
 });
 
 server.post("/upload-farm-img", uploadfarm.single("files"), (req, res, next) => {
-    var files = req.file;
+    let files = req.file;
     const params = req.body;
     if (files) {
         // res.json(jsonFormatSuccess("Upload success"));
@@ -162,12 +153,10 @@ server.post('/register', async (req, res) => {
     })
 });
 server.post('/login', (req, res) => {
-    // const {
-    //     username,
-    //     password
-    // } = req.body;
-    const username = req.body.username;
-    const password = req.body.password;
+    const {
+        username,
+        password
+    } = req.body; 
     mysqlConnection.query('SELECT * FROM user WHERE card_id_number = ? AND is_active= ?', [username, 1], async (err, results, fields) => {
         if (!err) {
             if (results.length > 0) {
@@ -175,7 +164,7 @@ server.post('/login', (req, res) => {
                 const user = results[0];
                 const passwordValid = await bcrypt.compare(password, user.password)
                 if (passwordValid) {
-                    devare user.password;
+                    delete user.password;
                     const token = GenerateAuthToken(user);
                     res.json({
                         success: 1,
@@ -362,9 +351,9 @@ server.post('/list/unit/production_cost', Authenticate, (req, res) => {
         }
     })
 });
-server.post('/devare/production_cost', Authenticate, (req, res) => {
+server.post('/delete/production_cost', Authenticate, (req, res) => {
     const params = req.body;
-    mysqlConnection.query(`DEvarE FROM production_cost WHERE (production_cost_id = '${params.production_cost_id}')`, (err, results, fields) => {
+    mysqlConnection.query(`DELETE FROM production_cost WHERE (production_cost_id = '${params.production_cost_id}')`, (err, results, fields) => {
         if (!err) {
             res.json(jsonFormatSuccess(results));
         } else {
@@ -372,9 +361,9 @@ server.post('/devare/production_cost', Authenticate, (req, res) => {
         }
     })
 });
-server.post('/devare/income', Authenticate, (req, res) => {
+server.post('/delete/income', Authenticate, (req, res) => {
     const params = req.body;
-    mysqlConnection.query(`DEvarE FROM income WHERE (income_id = '${params.income_id}')`, (err, results, fields) => {
+    mysqlConnection.query(`DELETE FROM income WHERE (income_id = '${params.income_id}')`, (err, results, fields) => {
         if (!err) {
             res.json(jsonFormatSuccess(results));
         } else {
@@ -401,19 +390,4 @@ server.post('/edit/income', Authenticate, (req, res) => {
             console.log(err);
         }
     })
-});
-const jsonFormatSuccess = (results) => {
-    return {
-      success: 1,
-      data: results
-    };
-  };
-  
-  const jsonFormatError = (code, message) => {
-    return {
-      success: 0,
-      error_code: code,
-      error_message: message
-    };
-  };
-  
+}); 
