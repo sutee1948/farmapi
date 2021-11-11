@@ -13,7 +13,7 @@ const GenerateAuthToken = require('./generator-token')
 const {
     jsonFormatSuccess,
     jsonFormatError
-} = require('./format_json'); 
+} = require('./format_json');
 server.use(
     cors(),
     bodyParser.json(),
@@ -25,7 +25,7 @@ server.use(
 
 //WebApp.connectHandlers.use(Meteor.bindEnvironment(server));
 
-var mysqlConnection = mysql.createConnection({ 
+var mysqlConnection = mysql.createConnection({
     host: 'dcrhg4kh56j13bnu.cbetxkdyhwsb.us-east-1.rds.amazonaws.com',
     user: 'o26p6bs33yavssso',
     port: '3306',
@@ -105,6 +105,9 @@ const uploadfarm = multer({
         fileSize: 15000000,
     },
 });
+server.get("/", (req, res, next) => {
+    res.send('hi')
+});
 server.post("/upload-owner-img", upload.single("files"), (req, res, next) => {
     let files = req.file;
     const params = req.body;
@@ -156,7 +159,7 @@ server.post('/login', (req, res) => {
     const {
         username,
         password
-    } = req.body; 
+    } = req.body;
     mysqlConnection.query('SELECT * FROM user WHERE card_id_number = ? AND is_active= ?', [username, 1], async (err, results, fields) => {
         if (!err) {
             if (results.length > 0) {
@@ -390,4 +393,4 @@ server.post('/edit/income', Authenticate, (req, res) => {
             console.log(err);
         }
     })
-}); 
+});
