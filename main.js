@@ -40,7 +40,7 @@ mysqlConnection.connect((err) => {
     else
         console.log('DB connection failed \n Error : ' + JSON.stringify(err, undefined, 2));
 });
-const PORT = process.env.PORT || 3006;
+const PORT = process.env.PORT || 3005;
 server.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}.`);
 });
