@@ -8,6 +8,7 @@ const server = express();
 const mysql = require('mysql');;
 const fs = require("fs");
 const multer = require("multer");
+const path = require('path');
 const Authenticate = require('./verify-token');
 const GenerateAuthToken = require('./generator-token')
 const {
@@ -107,7 +108,35 @@ const uploadfarm = multer({
 });
 server.get("/", (req, res, next) => {
     res.send('hi')
-});
+}); 
+server.get('/farm/:path', function (req, res) { 
+    var farmname =  req.params.path.trim();  
+    var optionsfarmname = {
+        root: path.join('farm')
+    }; 
+    res.sendFile(farmname, optionsfarmname, function (err) {
+        if (err) {
+            // console.log(err);
+            // next(err);
+        } else {
+            // console.log('Sent:', farmname);
+        }
+    });
+})
+server.get('/img/:path', function (req, res) { 
+    var imgname =  req.params.path.trim();  
+    var optionsimgname = {
+        root: path.join('img')
+    }; 
+    res.sendFile(imgname, optionsimgname, function (err) {
+        if (err) {
+            // console.log(err);
+            // next(err);
+        } else {
+            // console.log('Sent:', imgname);
+        }
+    });
+})
 server.post("/upload-owner-img", upload.single("files"), (req, res, next) => {
     let files = req.file;
     const params = req.body;
@@ -388,6 +417,16 @@ server.post('/edit/production_cost', Authenticate, (req, res) => {
 server.post('/edit/income', Authenticate, (req, res) => {
     const params = req.body;
     mysqlConnection.query(`UPDATE income SET name = '${params.name}', amount = '${params.amount}', unit = '${params.unit}', price = '${params.price}', sum = '${params.sum}', date = '${params.date}' WHERE (income_id = '${params.income_id}')`, (err, results, fields) => {
+        if (!err) {
+            res.json(jsonFormatSuccess(results));
+        } else {
+            console.log(err);
+        }
+    })
+});
+server.post('/list/unit/income', Authenticate, (req, res) => {
+    const params = req.body;
+    mysqlConnection.query(`SELECT unit FROM income WHERE farm_id='${params.farm_id}' GROUP BY unit`, (err, results, fields) => {
         if (!err) {
             res.json(jsonFormatSuccess(results));
         } else {
