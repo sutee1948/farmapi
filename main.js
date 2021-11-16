@@ -499,8 +499,7 @@ server.post('/end/crop', Authenticate, (req, res) => {
     })
 });
 server.post('/list/farm/crop/chart', (req, res) => {
-    const params = req.body;
-    console.log(params);
+    const params = req.body; 
     mysqlConnection.query(`SELECT income.farm_id,income.crop_id,income.month,income.sumincome,production_cost.sumproduction_cost FROM 
     (SELECT farm.farm_id,crop.crop_id,MONTH(production_cost.date) as 'month',sum(production_cost.sum)as'sumproduction_cost' FROM production_cost
         JOIN farm 
