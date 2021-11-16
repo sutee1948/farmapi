@@ -108,12 +108,12 @@ const uploadfarm = multer({
 });
 server.get("/", (req, res, next) => {
     res.send('hi')
-}); 
-server.get('/farm/:path', function (req, res) { 
-    var farmname =  req.params.path.trim();  
+});
+server.get('/farm/:path', function (req, res) {
+    var farmname = req.params.path.trim();
     var optionsfarmname = {
         root: path.join('farm')
-    }; 
+    };
     res.sendFile(farmname, optionsfarmname, function (err) {
         if (err) {
             // console.log(err);
@@ -123,11 +123,11 @@ server.get('/farm/:path', function (req, res) {
         }
     });
 })
-server.get('/img/:path', function (req, res) { 
-    var imgname =  req.params.path.trim();  
+server.get('/img/:path', function (req, res) {
+    var imgname = req.params.path.trim();
     var optionsimgname = {
         root: path.join('img')
-    }; 
+    };
     res.sendFile(imgname, optionsimgname, function (err) {
         if (err) {
             // console.log(err);
@@ -237,7 +237,7 @@ server.post('/list/farm', Authenticate, (req, res) => {
 });
 server.post('/add/production_cost', Authenticate, (req, res) => {
     const params = req.body;
-    mysqlConnection.query(`INSERT INTO production_cost (name, amount, unit, price, sum, date, farm_id) VALUES ('${params.name}', '${params.amount}', '${params.unit}', '${params.price}', '${params.sum}', '${params.date}', '${params.farm_id}');`, (err, results, fields) => {
+    mysqlConnection.query(`INSERT INTO production_cost (name, amount, unit, price, sum, date, crop_id) VALUES ('${params.name}', '${params.amount}', '${params.unit}', '${params.price}', '${params.sum}', '${params.date}', '${params.crop_id}');`, (err, results, fields) => {
         if (!err) {
             res.json(jsonFormatSuccess(results));
         } else {
@@ -247,7 +247,7 @@ server.post('/add/production_cost', Authenticate, (req, res) => {
 });
 server.post('/list/production_cost', Authenticate, (req, res) => {
     const params = req.body;
-    mysqlConnection.query(`SELECT * FROM production_cost WHERE farm_id='${params.farm_id}'`, (err, results, fields) => {
+    mysqlConnection.query(`SELECT * FROM production_cost WHERE crop_id='${params.crop_id}'`, (err, results, fields) => {
         if (!err) {
             res.json(jsonFormatSuccess(results));
         } else {
@@ -257,7 +257,7 @@ server.post('/list/production_cost', Authenticate, (req, res) => {
 });
 server.post('/add/income', Authenticate, (req, res) => {
     const params = req.body;
-    mysqlConnection.query(`INSERT INTO income (name, amount, unit, price, sum, date, farm_id) VALUES ('${params.name}', '${params.amount}', '${params.unit}', '${params.price}', '${params.sum}', '${params.date}', '${params.farm_id}');`, (err, results, fields) => {
+    mysqlConnection.query(`INSERT INTO income (name, amount, unit, price, sum, date, crop_id) VALUES ('${params.name}', '${params.amount}', '${params.unit}', '${params.price}', '${params.sum}', '${params.date}', '${params.crop_id}');`, (err, results, fields) => {
         if (!err) {
             res.json(jsonFormatSuccess(results));
         } else {
@@ -267,7 +267,7 @@ server.post('/add/income', Authenticate, (req, res) => {
 });
 server.post('/list/income', Authenticate, (req, res) => {
     const params = req.body;
-    mysqlConnection.query(`SELECT * FROM income WHERE farm_id='${params.farm_id}'`, (err, results, fields) => {
+    mysqlConnection.query(`SELECT * FROM income WHERE crop_id='${params.crop_id}'`, (err, results, fields) => {
         if (!err) {
             res.json(jsonFormatSuccess(results));
         } else {
@@ -277,7 +277,7 @@ server.post('/list/income', Authenticate, (req, res) => {
 });
 server.post('/list/income/sum', Authenticate, (req, res) => {
     const params = req.body;
-    mysqlConnection.query(`SELECT sum(sum) as 'sum' FROM income WHERE farm_id='${params.farm_id}'`, (err, results, fields) => {
+    mysqlConnection.query(`SELECT sum(sum) as 'sum' FROM income WHERE crop_id='${params.crop_id}'`, (err, results, fields) => {
         if (!err) {
             res.json(jsonFormatSuccess(results));
         } else {
@@ -287,7 +287,7 @@ server.post('/list/income/sum', Authenticate, (req, res) => {
 });
 server.post('/list/production_cost/sum', Authenticate, (req, res) => {
     const params = req.body;
-    mysqlConnection.query(`SELECT sum(sum) as 'sum' FROM production_cost WHERE farm_id='${params.farm_id}'`, (err, results, fields) => {
+    mysqlConnection.query(`SELECT sum(sum) as 'sum' FROM production_cost WHERE crop_id='${params.crop_id}'`, (err, results, fields) => {
         if (!err) {
             res.json(jsonFormatSuccess(results));
         } else {
@@ -299,18 +299,20 @@ server.post('/summarize', Authenticate, (req, res) => {
     const params = req.body;
     mysqlConnection.query(`select sumproduction_cost.*,sumincome.sumincome,sumincome-sumproduction_cost as 'profit' from 
     (SELECT farm.*,sum(production_cost.sum)as'sumproduction_cost' FROM production_cost
-    join farm
-    join user
-    on  production_cost.farm_id=farm.farm_id and user.user_id=farm.user_id
-    where user.user_id='${params.user_id}'
-    group by production_cost.farm_id) sumproduction_cost 
+    JOIN farm
+    JOIN user
+    JOIN crop
+    ON production_cost.crop_id COLLATE utf8mb4_general_ci =crop.crop_id AND user.user_id=farm.user_id AND crop.farm_id=farm.farm_id
+    WHERE user.user_id='${params.user_id}'
+    GROUP BY farm.farm_id) sumproduction_cost 
     join 
-    (SELECT farm.farm_id,sum(income.sum)as'sumincome' FROM income
-    join farm
-    join user
-    on  income.farm_id=farm.farm_id and user.user_id=farm.user_id
-    where user.user_id='${params.user_id}'
-    group by income.farm_id) sumincome
+    (SELECT farm.*,sum(income.sum)as'sumincome' FROM income
+    JOIN farm
+    JOIN user
+    JOIN crop
+    ON income.crop_id COLLATE utf8mb4_general_ci =crop.crop_id AND user.user_id=farm.user_id AND crop.farm_id=farm.farm_id
+    WHERE user.user_id='${params.user_id}'
+    GROUP BY farm.farm_id) sumincome
     on sumproduction_cost.farm_id=sumincome.farm_id `, (err, results, fields) => {
         if (!err) {
             res.json(jsonFormatSuccess(results));
@@ -321,7 +323,7 @@ server.post('/summarize', Authenticate, (req, res) => {
 });
 server.post('/add/forecast', Authenticate, (req, res) => {
     const params = req.body;
-    mysqlConnection.query(`INSERT INTO forecast (cost_price, amount, unit, market_price, sum, percent, p_cost, p_unit, p_add_price, p_add_amount) VALUES ('${params.cost_price}', '${params.amount}', '${params.unit}', '${params.market_price}', '${params.sum}', '${params.percent}', '${params.p_cost}', '${params.p_unit}', '${params.p_add_price}', '${params.p_add_amount}')`, (err, results, fields) => {
+    mysqlConnection.query(`INSERT INTO forecast (cost_price, amount, unit, market_price, sum, percent, p_cost, p_unit, p_add_price, p_add_amount, crop_id) VALUES ('${params.cost_price}', '${params.amount}', '${params.unit}', '${params.market_price}', '${params.sum}', '${params.percent}', '${params.p_cost}', '${params.p_unit}', '${params.p_add_price}', '${params.p_add_amount}', '${params.crop_id}')`, (err, results, fields) => {
         if (!err) {
             res.json(jsonFormatSuccess(results));
         } else {
@@ -332,7 +334,7 @@ server.post('/add/forecast', Authenticate, (req, res) => {
 
 server.post('/list/forecast', Authenticate, (req, res) => {
     const params = req.body;
-    mysqlConnection.query(`SELECT * FROM forecast WHERE farm_id='${params.farm_id}'`, (err, results, fields) => {
+    mysqlConnection.query(`SELECT * FROM forecast WHERE crop_id='${params.crop_id}'`, (err, results, fields) => {
         if (!err) {
             res.json(jsonFormatSuccess(results));
         } else {
@@ -376,7 +378,7 @@ server.post('/save/newpassword', (req, res) => {
 
 server.post('/list/unit/production_cost', Authenticate, (req, res) => {
     const params = req.body;
-    mysqlConnection.query(`SELECT unit FROM production_cost WHERE farm_id='${params.farm_id}' GROUP BY unit`, (err, results, fields) => {
+    mysqlConnection.query(`SELECT unit FROM production_cost WHERE crop_id='${params.crop_id}' GROUP BY unit`, (err, results, fields) => {
         if (!err) {
             res.json(jsonFormatSuccess(results));
         } else {
@@ -426,9 +428,40 @@ server.post('/edit/income', Authenticate, (req, res) => {
 });
 server.post('/list/unit/income', Authenticate, (req, res) => {
     const params = req.body;
-    mysqlConnection.query(`SELECT unit FROM income WHERE farm_id='${params.farm_id}' GROUP BY unit`, (err, results, fields) => {
+    mysqlConnection.query(`SELECT unit FROM income WHERE crop_id='${params.crop_id}' GROUP BY unit`, (err, results, fields) => {
         if (!err) {
             res.json(jsonFormatSuccess(results));
+        } else {
+            console.log(err);
+        }
+    })
+});
+server.post('/list/farm/crop', Authenticate, (req, res) => {
+    const params = req.body; 
+    mysqlConnection.query(`SELECT * FROM farm JOIN crop JOIN user ON farm.farm_id=crop.farm_id AND farm.user_id=user.user_id WHERE user.user_id=${params.user_id} AND farm.farm_id=${params.farm_id}`, (err, results, fields) => {
+        if (!err) { 
+            if (results.length > 0) {
+                res.json(jsonFormatSuccess(results));
+            } else {
+                mysqlConnection.query(`INSERT INTO crop (crop_id, farm_id, crop_num) VALUES ('F${params.farm_id}C1', '${params.farm_id}', '1')`, (err, results, fields) => {
+                    if (!err) { 
+                        if (results.length > 0) {
+                            mysqlConnection.query(`SELECT * FROM farm JOIN crop JOIN user ON farm.farm_id=crop.farm_id AND farm.user_id=user.user_id WHERE user.user_id=${params.user_id} AND farm.farm_id=${params.farm_id}`, (err, results, fields) => {
+                                if (!err) { 
+                                    res.json(jsonFormatSuccess(results));
+                                } else {
+                                    console.log(err);
+                                }
+                            })
+                        } else {
+                            console.log(err);
+                        }
+                    } else {
+                        console.log(err);
+                    }
+                })
+            }
+
         } else {
             console.log(err);
         }
