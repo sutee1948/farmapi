@@ -445,7 +445,7 @@ server.post('/list/farm/crop', Authenticate, (req, res) => {
             } else {
                 mysqlConnection.query(`INSERT INTO crop (crop_id, farm_id, crop_num) VALUES ('F${params.farm_id}C1', '${params.farm_id}', '1')`, (err, results, fields) => {
                     if (!err) {
-                        if (results.length > 0) {
+                        if (results.length > 0) { 
                             mysqlConnection.query(`SELECT * FROM farm JOIN crop JOIN user ON farm.farm_id=crop.farm_id AND farm.user_id=user.user_id WHERE user.user_id=${params.user_id} AND farm.farm_id=${params.farm_id}  ORDER BY crop.crop_num ASC`, (err, results, fields) => {
                                 if (!err) {
                                     res.json(jsonFormatSuccess(results));
@@ -478,11 +478,11 @@ server.post('/edit/farm', Authenticate, (req, res) => {
         }
     })
 });
-server.post('/end/crop', Authenticate, (req, res) => {
-    const params = req.body;
-    mysqlConnection.query(`UPDATE crop SET end_crop = '${params.end_crop}' WHERE (crop_id = '${params.crop_id}') and (farm_id = '${params.farm_id}') and (crop_num = '1')`, (err, results, fields) => {
-        if (!err) {
-            if (results.length > 0) {
+server.post('/end/crop', Authenticate, (req, res) => { 
+    const params = req.body; 
+    mysqlConnection.query(`UPDATE crop SET end_crop = '${params.end_crop}' WHERE (crop_id = '${params.crop_id}') and (farm_id = '${params.farm_id}') and (crop_num = '${params.crop_num}')`, (err, results, fields) => {
+        if (!err) { 
+            if (results) { 
                 mysqlConnection.query(`INSERT INTO crop (crop_id, farm_id, crop_num) VALUES ('F${params.farm_id}C${params.new_crop}', '${params.farm_id}', '${params.new_crop}')`, (err, results, fields) => {
                     if (!err) {
                         res.json(jsonFormatSuccess(results));
