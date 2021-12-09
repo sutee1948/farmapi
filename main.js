@@ -9,6 +9,7 @@ const mysql = require('mysql');;
 const fs = require("fs");
 const multer = require("multer");
 const path = require('path');
+const bcrypt = require('bcryptjs');
 const Authenticate = require('./verify-token');
 const GenerateAuthToken = require('./generator-token')
 const {
@@ -107,7 +108,7 @@ const uploadfarm = multer({
     },
 });
 server.get("/", (req, res, next) => {
-    res.send('hi')
+    res.send('hiwefeddwfeee')
 });
 server.get('/farm/:path', function (req, res) {
     var farmname = req.params.path.trim();
@@ -150,14 +151,13 @@ server.post("/upload-owner-img", upload.single("files"), (req, res, next) => {
             }
         })
     } else {
-        res.json(jsonFormatError("Non Upload"));
+        res.json(jsonFormatSuccess("Non Upload"));
     }
 });
 
 server.post("/upload-farm-img", uploadfarm.single("files"), (req, res, next) => {
     let files = req.file;
     const params = req.body;
-    console.log(files);
     if (files) {
         // res.json(jsonFormatSuccess("Upload success"));
         mysqlConnection.query(`UPDATE farm SET farm_pic = '${files.filename}' WHERE (farm_id = '${params.farm_id}')`, (err, results, fields) => {
@@ -168,16 +168,15 @@ server.post("/upload-farm-img", uploadfarm.single("files"), (req, res, next) => 
             }
         })
     } else {
-        res.json(jsonFormatError("Non Upload"));
+        res.json(jsonFormatSuccess("Non Upload"));
     }
 });
 
 // server.listen(8081, 'us-cdbr-iron-east-01.cleardb.net') 
 server.post('/register', async (req, res) => {
     const params = req.body;
-    const bcrypt = require('bcryptjs');
     const password = await bcrypt.hash(params.password, 8);
-    mysqlConnection.query(`INSERT INTO user (name, phone, card_id_number, address, birth_date, farm_name, password, role) VALUES ('${params.name}', '${params.phone}', '${params.card_id_number}', '${params.address}', '${params.birth_date}','${params.farm_name}', '${password}', 'owner');`, (err, results, fields) => {
+    mysqlConnection.query(`INSERT INTO user (name, phone, username, address, birth_date, farm_name, password, role) VALUES ('${params.name}', '${params.phone}', '${params.username}', '${params.address}', '${params.birth_date}','${params.farm_name}', '${password}', 'owner');`, (err, results, fields) => {
         if (!err) {
             res.json(jsonFormatSuccess(results));
         } else {
@@ -190,10 +189,9 @@ server.post('/login', (req, res) => {
         username,
         password
     } = req.body;
-    mysqlConnection.query('SELECT * FROM user WHERE card_id_number = ? AND is_active= ?', [username, 1], async (err, results, fields) => {
+    mysqlConnection.query('SELECT * FROM user WHERE username = ? AND is_active= ?', [username, 1], async (err, results, fields) => {
         if (!err) {
             if (results.length > 0) {
-                const bcrypt = require('bcryptjs');
                 const user = results[0];
                 const passwordValid = await bcrypt.compare(password, user.password)
                 if (passwordValid) {
@@ -343,9 +341,9 @@ server.post('/list/forecast', Authenticate, (req, res) => {
     })
 });
 
-server.post('/check/card_id_number', (req, res) => {
+server.post('/check/username', (req, res) => {
     const params = req.body;
-    mysqlConnection.query(`SELECT * FROM user WHERE card_id_number='${params.card_id_number}'`, (err, results, fields) => {
+    mysqlConnection.query(`SELECT * FROM user WHERE username='${params.username}'`, (err, results, fields) => {
         if (!err) {
             res.json(jsonFormatSuccess(results));
         } else {
@@ -354,7 +352,7 @@ server.post('/check/card_id_number', (req, res) => {
     })
 });
 
-server.post('/check/birth_date/card_id_number', (req, res) => {
+server.post('/check/birth_date/username', (req, res) => {
     const params = req.body;
     mysqlConnection.query(`SELECT * FROM user WHERE user_id='${params.user_id}' AND birth_date='${params.birth_date}'`, (err, results, fields) => {
         if (!err) {
@@ -364,9 +362,9 @@ server.post('/check/birth_date/card_id_number', (req, res) => {
         }
     })
 });
-
-server.post('/save/newpassword', (req, res) => {
+server.post('/save/newpassword', async (req, res) => {
     const params = req.body;
+    const newpassword = await bcrypt.hash(params.newpassword, 8);
     mysqlConnection.query(`UPDATE user SET password = '${newpassword}' WHERE (user_id = '${params.user_id}')`, (err, results, fields) => {
         if (!err) {
             res.json(jsonFormatSuccess(results));
@@ -498,17 +496,17 @@ server.post('/end/crop', Authenticate, (req, res) => {
         }
     })
 });
-server.post('/list/farm/crop/chart', (req, res) => {
-    const params = req.body; 
+server.post('/list/farm/crop/chart', Authenticate, (req, res) => {
+    const params = req.body;
     mysqlConnection.query(`SELECT income.farm_id,income.crop_id,income.month,income.sumincome,production_cost.sumproduction_cost FROM 
-    (SELECT farm.farm_id,crop.crop_id,MONTH(production_cost.date) as 'month',sum(production_cost.sum)as'sumproduction_cost' FROM production_cost
+    (SELECT farm.farm_id,crop.crop_id,MONTH(MAX(production_cost.date)) as 'month',sum(production_cost.sum)as'sumproduction_cost' FROM production_cost
         JOIN farm 
         JOIN crop
         ON production_cost.crop_id COLLATE utf8mb4_general_ci =crop.crop_id  AND farm.farm_id=crop.farm_id
         WHERE farm.farm_id='${params.farm_id}'
         GROUP BY crop.crop_id ) production_cost
         JOIN 
-        (SELECT farm.farm_id,crop.crop_id,MONTH(income.date) as 'month',sum(income.sum)as'sumincome' FROM income
+        (SELECT farm.farm_id,crop.crop_id,MONTH(MAX(income.date)) as 'month',sum(income.sum)as'sumincome' FROM income
         JOIN farm 
         JOIN crop
         ON income.crop_id COLLATE utf8mb4_general_ci =crop.crop_id  AND farm.farm_id=crop.farm_id
@@ -517,6 +515,87 @@ server.post('/list/farm/crop/chart', (req, res) => {
         ON income.farm_id=production_cost.farm_id`, (err, results, fields) => {
         if (!err) {
             res.json(jsonFormatSuccess(results));
+        } else {
+            console.log(err);
+        }
+    })
+});
+server.post('/check/password', (req, res) => {
+    try {
+        const {
+            user_id,
+            password,
+            password2
+        } = req.body;
+        mysqlConnection.query('SELECT * FROM `user` WHERE `user_id` = ?', [user_id], async (err, results, fields) => {
+            if (!err) {
+                if (results.length > 0) {
+                    const bcrypt = require('bcryptjs');
+                    const hash = await bcrypt.hash(password, 8);
+                    const user = results[0];
+                    const passwordValid = await bcrypt.compare(password, user.password)
+                    console.log(passwordValid);
+                    if (passwordValid) {
+                        res.json(jsonFormatSuccess(passwordValid));
+                    } else {
+                        res.json(jsonFormatError('', ''));
+                    }
+                } else {
+                    res.json(jsonFormatError('', ''));
+                }
+            } else {
+                console.log(err);
+            }
+        })
+
+    } catch (error) {
+        res.json(jsonFormatError('', error));
+    }
+});
+server.post('/update/password', async (req, res) => {
+    try {
+        const {
+            user_id,
+            password,
+        } = req.body;
+        const hash = await bcrypt.hash(password, 8)
+        mysqlConnection.query('UPDATE  user SET password = ? WHERE (user_id = ?);', [hash, user_id], (err, results, fields) => {
+            if (!err) {
+                res.json(jsonFormatSuccess(results));
+            } else {
+                console.log(err);
+            }
+        })
+
+    } catch (error) {
+        res.json(jsonFormatError('', error));
+    }
+});
+server.post('/edituser', Authenticate, (req, res) => {
+    const params = req.body;
+    mysqlConnection.query(`UPDATE user SET name = '${params.name}', phone = '${params.phone}', address = '${params.address}', birth_date = '${params.birth_date}', farm_name = '${params.farm_name}' WHERE (user_id = '${params.user_id}')`, (err, results, fields) => {
+        if (!err) {
+            res.json(jsonFormatSuccess(results));
+        } else {
+            console.log(err);
+        }
+    })
+});
+
+server.post('/getuserdata', Authenticate, (req, res) => {
+    const {
+        user_id
+    } = req.body;
+    mysqlConnection.query('SELECT * FROM user WHERE user_id = ?', [user_id], async (err, results, fields) => {
+        if (!err) {
+            if (results.length > 0) { 
+                res.json({
+                    success: 1,
+                    user: results[0]
+                });
+            } else {
+                res.json(jsonFormatError('', ''));
+            }
         } else {
             console.log(err);
         }
