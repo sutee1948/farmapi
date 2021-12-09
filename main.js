@@ -11,7 +11,11 @@ const multer = require("multer");
 const path = require('path');
 const bcrypt = require('bcryptjs');
 const Authenticate = require('./verify-token');
-const GenerateAuthToken = require('./generator-token') 
+const GenerateAuthToken = require('./generator-token')
+const {
+    jsonFormatSuccess,
+    jsonFormatError
+} = require('./format_json');
 server.use(
     cors(),
     bodyParser.json(),
