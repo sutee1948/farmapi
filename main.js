@@ -108,7 +108,7 @@ const uploadfarm = multer({
     },
 });
 server.get("/", (req, res, next) => {
-    res.send('hiwefeddwfeee')
+    res.send('hiwefewfeee')
 });
 server.get('/farm/:path', function (req, res) {
     var farmname = req.params.path.trim();
