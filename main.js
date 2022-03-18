@@ -5,7 +5,8 @@ const bodyParser = require('body-parser');
 const cors = require('cors');
 const server = express();
 //const CryptoJS = require("crypto-js");
-const mysql = require('mysql');;
+// const mysql = require('mysql');
+const mysql = require('mysql2')
 const fs = require("fs");
 const multer = require("multer");
 const path = require('path');
@@ -434,6 +435,16 @@ server.post('/list/unit/income', Authenticate, (req, res) => {
         }
     })
 });
+server.post('/list/unit/forecast', Authenticate, (req, res) => {
+    const params = req.body;
+    mysqlConnection.query(`SELECT unit FROM forecast WHERE crop_id='${params.crop_id}' GROUP BY unit`, (err, results, fields) => {
+        if (!err) {
+            res.json(jsonFormatSuccess(results));
+        } else {
+            console.log(err);
+        }
+    })
+});
 server.post('/list/farm/crop', Authenticate, (req, res) => {
     const params = req.body;
     mysqlConnection.query(`SELECT * FROM farm JOIN crop JOIN user ON farm.farm_id=crop.farm_id AND farm.user_id=user.user_id WHERE user.user_id=${params.user_id} AND farm.farm_id=${params.farm_id} ORDER BY crop.crop_num ASC`, (err, results, fields) => {
@@ -498,21 +509,20 @@ server.post('/end/crop', Authenticate, (req, res) => {
 });
 server.post('/list/farm/crop/chart', Authenticate, (req, res) => {
     const params = req.body;
-    mysqlConnection.query(`SELECT income.farm_id,income.crop_id,income.month,income.sumincome,production_cost.sumproduction_cost FROM 
-    (SELECT farm.farm_id,crop.crop_id,MONTH(MAX(production_cost.date)) as 'month',sum(production_cost.sum)as'sumproduction_cost' FROM production_cost
-        JOIN farm 
+    mysqlConnection.query(`SELECT income.farm_id,income.crop_id,income.month,income.year,income.sumincome,production_cost.  sumproduction_cost FROM 
+    (SELECT crop.farm_id,crop.crop_id,MONTH(MAX(production_cost.date)) as 'month',YEAR(MAX(production_cost.date)) as 'year',sum(production_cost.sum)as'sumproduction_cost' FROM production_cost
         JOIN crop
-        ON production_cost.crop_id COLLATE utf8mb4_general_ci =crop.crop_id  AND farm.farm_id=crop.farm_id
-        WHERE farm.farm_id='${params.farm_id}'
-        GROUP BY crop.crop_id ) production_cost
+        ON production_cost.crop_id COLLATE utf8mb4_general_ci =crop.crop_id  
+        GROUP BY crop.crop_id) production_cost
         JOIN 
-        (SELECT farm.farm_id,crop.crop_id,MONTH(MAX(income.date)) as 'month',sum(income.sum)as'sumincome' FROM income
-        JOIN farm 
+        (SELECT crop.farm_id,crop.crop_id,MONTH(MAX(income.date)) as 'month',YEAR(MAX(income.date)) as 'year',sum(income.sum)as'sumincome' FROM income
         JOIN crop
-        ON income.crop_id COLLATE utf8mb4_general_ci =crop.crop_id  AND farm.farm_id=crop.farm_id
-        WHERE farm.farm_id='${params.farm_id}' 
-        GROUP BY crop.crop_id ) income
-        ON income.farm_id=production_cost.farm_id`, (err, results, fields) => {
+        ON income.crop_id COLLATE utf8mb4_general_ci =crop.crop_id  
+        GROUP BY crop.crop_id) income
+        JOIN farm
+        ON income.farm_id=production_cost.farm_id AND farm.farm_id=income.farm_id AND farm.farm_id=production_cost.farm_id
+		WHERE farm.farm_id='${params.farm_id}' 
+        GROUP BY crop_id`, (err, results, fields) => {
         if (!err) {
             res.json(jsonFormatSuccess(results));
         } else {
@@ -588,7 +598,7 @@ server.post('/getuserdata', Authenticate, (req, res) => {
     } = req.body;
     mysqlConnection.query('SELECT * FROM user WHERE user_id = ?', [user_id], async (err, results, fields) => {
         if (!err) {
-            if (results.length > 0) { 
+            if (results.length > 0) {
                 res.json({
                     success: 1,
                     user: results[0]
@@ -596,6 +606,23 @@ server.post('/getuserdata', Authenticate, (req, res) => {
             } else {
                 res.json(jsonFormatError('', ''));
             }
+        } else {
+            console.log(err);
+        }
+    })
+});
+server.post('/sumlinechart', Authenticate, (req, res) => {
+    const params = req.body;
+    mysqlConnection.query(`SELECT *,sumincometb.sumincome-production_costtb.sumproduction_cost as 'sumprofit' FROM crop
+    JOIN farm
+    JOIN (SELECT crop_id,sum(sum) as 'sumproduction_cost' FROM production_cost
+    GROUP BY crop_id) production_costtb
+    JOIN (SELECT crop_id,sum(sum) as 'sumincome' FROM income
+    GROUP BY crop_id) sumincometb 
+    ON crop.farm_id=farm.farm_id AND crop.crop_id COLLATE utf8mb4_general_ci=sumincometb.crop_id AND crop.crop_id COLLATE utf8mb4_general_ci=production_costtb.crop_id
+    WHERE farm.farm_id='${params.farm_id}'`, async (err, results, fields) => {
+        if (!err) {
+            res.json(jsonFormatSuccess(results));
         } else {
             console.log(err);
         }
